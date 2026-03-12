@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  VITE_SUPABASE_URL = "https://fvioxpieyxtipymyvuxa.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2aW94cGlleXh0aXB5bXl2dXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTQ4MDksImV4cCI6MjA4ODg5MDgwOX0.R23HLKUx91N8g6ypi8tsVJ2--NvFRhSqzJ2NmwBjW5Y"
+  VITE_APP_NAME = "FreshTrack"
+  VITE_APP_VERSION = "1.0.0"
