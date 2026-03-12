@@ -1,4 +1,4 @@
-import { BatchStatus, statusConfig } from "@/lib/mock-data";
+import { type BatchStatus, BATCH_STATUS_CONFIG } from "@/types/database";
 
 interface StatusBadgeProps {
   status: BatchStatus;
@@ -7,15 +7,21 @@ interface StatusBadgeProps {
   pulse?: boolean;
 }
 
-export function StatusBadge({ status, size = "sm", showEmoji = true, pulse }: StatusBadgeProps) {
-  const config = statusConfig[status];
+export function StatusBadge({
+  status,
+  size = "sm",
+  showEmoji = true,
+  pulse,
+}: StatusBadgeProps) {
+  const config = BATCH_STATUS_CONFIG[status];
+
   const sizeClasses = {
     sm: "px-2.5 py-1 text-[11px]",
     md: "px-3 py-1.5 text-xs",
     lg: "px-4 py-2 text-sm",
   };
 
-  const shouldPulse = pulse ?? status === "urgent_sale";
+  const shouldPulse = pulse ?? status === "URGENT_SALE";
 
   return (
     <span

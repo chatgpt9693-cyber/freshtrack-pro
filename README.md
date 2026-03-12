@@ -1,73 +1,81 @@
-# Welcome to your Lovable project
+# FreshTrack — Подключение Supabase
 
-## Project info
+## Быстрый старт
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+### 1. Клонировать репо и установить зависимости
 
-## How can I edit this code?
+```bash
+git clone https://github.com/ВАШ_РЕПО.git freshtrack
+cd freshtrack
+npm install
+npm install @supabase/supabase-js
+```
 
-There are several ways of editing your application.
+### 2. Скопировать файлы из этого архива в проект
 
-**Use Lovable**
+```
+.env                          → корень проекта
+src/lib/supabase.ts           → src/lib/
+src/lib/queries.ts            → src/lib/
+src/lib/date-utils.ts         → src/lib/
+src/lib/validations.ts        → src/lib/
+src/types/database.ts         → src/types/  (создать папку если нет)
+```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 3. Добавить .env в .gitignore
 
-Changes made via Lovable will be committed automatically to this repo.
+Убедиться что в `.gitignore` есть строка:
+```
+.env
+```
 
-**Use your preferred IDE**
+### 4. Создать первого Admin пользователя
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+В Supabase Dashboard → Authentication → Users → Add user:
+- Ввести email и пароль
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+После создания в SQL Editor:
+```sql
+UPDATE public.user_profiles
+SET role = 'ADMIN'
+WHERE id = 'UUID_ПОЛЬЗОВАТЕЛЯ';
+```
 
-Follow these steps:
+### 5. Запустить
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Структура файлов
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Файл | Назначение |
+|------|-----------|
+| `src/lib/supabase.ts` | Supabase client + API методы |
+| `src/lib/queries.ts` | React Query хуки |
+| `src/lib/date-utils.ts` | Работа с датами, расчёт статусов, GS1 парсер |
+| `src/lib/validations.ts` | Zod схемы для форм |
+| `src/types/database.ts` | TypeScript типы из схемы БД |
 
-**Use GitHub Codespaces**
+## Использование в компонентах
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```tsx
+import { useBatches, useDashboardStats } from '@/lib/queries';
 
-## What technologies are used for this project?
+function Dashboard() {
+  const { data: stats, isLoading } = useDashboardStats();
+  const { data: batches } = useBatches({ status: 'URGENT_SALE' });
+  // ...
+}
+```
 
-This project is built with:
+## Realtime (добавить в App.tsx)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```tsx
+import { useBatchStatusRealtime } from '@/lib/queries';
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+function AppWithRealtime() {
+  useBatchStatusRealtime(); // подписка один раз на всё приложение
+  return <AppLayout />;
+}
+```

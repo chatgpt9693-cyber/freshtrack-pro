@@ -6,58 +6,120 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { products, batches, calculateStatus, getDaysLeft, getPercentLeft } from "@/lib/mock-data";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ScanBarcode, Search, CalendarIcon, Clock, Plus, Check, Package } from "lucide-react";
+import {
+  ScanBarcode, Search, CalendarIcon, Plus, Check,
+  Package, Loader2, PackageX,
+} from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useProductByBarcode, useBatchesByProduct, useCreateBatch } from "@/lib/queries";
+import { getDaysLeft, getPercentLeft, calculateStatus } from "@/lib/date-utils";
+import { useCategoryThresholds } from "@/lib/queries";
+
+// Прогресс-цвета по статусу
+const progressColors = {
+  ACTIVE:      "bg-status-active",
+  HURRY_UP:    "bg-status-hurry",
+  URGENT_SALE: "bg-status-urgent",
+  EXPIRED:     "bg-status-expired",
+} as const;
 
 export default function Scanner() {
-  const [barcode, setBarcode] = useState("");
-  const [result, setResult] = useState<typeof products[0] | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [barcode, setBarcode]       = useState("");
+  const [searchBarcode, setSearchBarcode] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm]   = useState(false);
+  const [expiryMode, setExpiryMode]     = useState<"date" | "days">("date");
+  const [expiryDate, setExpiryDate]     = useState<Date | undefined>();
+  const [shelfDays, setShelfDays]       = useState("");
+  const [quantity, setQuantity]         = useState("");
+  const [location, setLocation]         = useState("");
+  const [batchNumber, setBatchNumber]   = useState("");
 
-  // New batch form
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [expiryMode, setExpiryMode] = useState<"date" | "days">("date");
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>();
-  const [shelfDays, setShelfDays] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [location, setLocation] = useState("");
+  // Поиск продукта по штрихкоду
+  const {
+    data: product,
+    isLoading: productLoading,
+    isFetched: productFetched,
+  } = useProductByBarcode(searchBarcode);
+
+  // Партии этого продукта
+  const { data: productBatches = [] } = useBatchesByProduct(
+    product?.id ?? null
+  );
+
+  // Пороги для предпросмотра статуса
+  const { data: thresholds } = useCategoryThresholds();
+
+  // Мутация создания партии
+  const createBatch = useCreateBatch();
 
   const handleSearch = () => {
-    if (!barcode.trim()) return;
-    const found = products.find((p) => p.barcode === barcode.trim());
-    setResult(found || null);
-    setSearched(true);
+    const trimmed = barcode.trim();
+    if (!trimmed) return;
+    setSearchBarcode(trimmed);
     setShowAddForm(false);
   };
 
-  const productBatches = result ? batches.filter((b) => b.productId === result.id) : [];
+  // Вычисляем дату истечения из режима ввода
+  const computedExpiryDate =
+    expiryMode === "date"
+      ? expiryDate
+      : shelfDays
+      ? addDays(new Date(), parseInt(shelfDays))
+      : undefined;
 
-  const computedExpiryDate = expiryMode === "date"
-    ? expiryDate
-    : shelfDays ? addDays(new Date(), parseInt(shelfDays)) : undefined;
+  // Статус предпросмотра для новой партии
+  const previewStatus =
+    computedExpiryDate && thresholds
+      ? calculateStatus(
+          format(computedExpiryDate, "yyyy-MM-dd"),
+          format(new Date(), "yyyy-MM-dd"),
+          thresholds
+        )
+      : null;
 
-  const handleAddBatch = () => {
-    if (!computedExpiryDate || !quantity) return;
-    toast.success("Партия добавлена", {
-      description: `${result?.name} — годен до ${format(computedExpiryDate, "dd.MM.yyyy")}`,
-    });
-    setShowAddForm(false);
-    setExpiryDate(undefined);
-    setShelfDays("");
-    setQuantity("");
-    setLocation("");
+  const handleAddBatch = async () => {
+    if (!product || !computedExpiryDate || !quantity) return;
+
+    try {
+      await createBatch.mutateAsync({
+        product_id:               product.id,
+        production_date:          format(new Date(), "yyyy-MM-dd"),
+        expiration_date_effective: format(computedExpiryDate, "yyyy-MM-dd"),
+        quantity:                 parseInt(quantity),
+        location:                 location || product.default_location || null,
+        batch_number:             batchNumber || null,
+      });
+
+      toast.success("Партия добавлена", {
+        description: `${product.name} — годен до ${format(computedExpiryDate, "dd.MM.yyyy")}`,
+      });
+
+      // Сброс формы
+      setShowAddForm(false);
+      setExpiryDate(undefined);
+      setShelfDays("");
+      setQuantity("");
+      setLocation("");
+      setBatchNumber("");
+    } catch (err) {
+      toast.error("Ошибка при сохранении", {
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
+      });
+    }
   };
+
+  const searched = searchBarcode !== null;
+  const notFound = searched && !productLoading && !product;
 
   return (
     <div className="p-4 md:p-8 gradient-mesh min-h-screen">
       <div className="max-w-xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Заголовок */}
         <motion.div
           className="text-center pt-4"
           initial={{ opacity: 0, y: -10 }}
@@ -67,10 +129,12 @@ export default function Scanner() {
             <ScanBarcode className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Сканер</h1>
-          <p className="text-muted-foreground text-sm mt-1">Введите или отсканируйте штрихкод товара</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Введите или отсканируйте штрихкод товара
+          </p>
         </motion.div>
 
-        {/* Search Bar */}
+        {/* Строка поиска */}
         <motion.div
           className="flex gap-2"
           initial={{ opacity: 0, y: 10 }}
@@ -90,15 +154,20 @@ export default function Scanner() {
           <Button
             onClick={handleSearch}
             size="lg"
+            disabled={productLoading}
             className="h-14 px-6 rounded-2xl shadow-md shadow-primary/20"
           >
-            <Search className="w-5 h-5" />
+            {productLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
           </Button>
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {/* Not found */}
-          {searched && !result && (
+          {/* Не найден */}
+          {notFound && (
             <motion.div
               key="not-found"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -107,9 +176,11 @@ export default function Scanner() {
             >
               <Card className="border-dashed border-2 border-muted-foreground/20">
                 <CardContent className="p-8 text-center">
-                  <Package className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <PackageX className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="font-medium">Продукт не найден</p>
-                  <p className="text-sm text-muted-foreground mt-1">Можно добавить новый товар в справочник</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Штрихкод <span className="font-mono">{searchBarcode}</span> не зарегистрирован
+                  </p>
                   <Button variant="outline" className="mt-4 rounded-xl">
                     <Plus className="w-4 h-4 mr-2" />
                     Добавить товар
@@ -119,8 +190,8 @@ export default function Scanner() {
             </motion.div>
           )}
 
-          {/* Found */}
-          {result && (
+          {/* Найден */}
+          {product && (
             <motion.div
               key="found"
               className="space-y-4"
@@ -128,27 +199,31 @@ export default function Scanner() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {/* Product Info */}
+              {/* Карточка продукта */}
               <Card>
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h2 className="text-lg font-bold">{result.name}</h2>
-                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{result.barcode}</p>
+                      <h2 className="text-lg font-bold">{product.name}</h2>
+                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                        {product.barcode}
+                      </p>
                     </div>
-                    <span className="text-[11px] bg-accent text-accent-foreground px-2.5 py-1 rounded-lg font-medium">
-                      {result.category}
-                    </span>
+                    {product.category && (
+                      <span className="text-[11px] bg-accent text-accent-foreground px-2.5 py-1 rounded-lg font-medium">
+                        {product.category}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <span>📍 {result.defaultLocation}</span>
-                    <span>🏭 {result.supplier}</span>
-                    <span>⏱ {result.shelfLifeDays} дн. хранения</span>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+                    {product.default_location && <span>📍 {product.default_location}</span>}
+                    {product.supplier && <span>🏭 {product.supplier}</span>}
+                    <span>⏱ {product.shelf_life_days} дн. хранения</span>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Add batch button */}
+              {/* Кнопка добавить партию */}
               {!showAddForm && (
                 <Button
                   onClick={() => setShowAddForm(true)}
@@ -159,7 +234,7 @@ export default function Scanner() {
                 </Button>
               )}
 
-              {/* Add Batch Form */}
+              {/* Форма добавления партии */}
               <AnimatePresence>
                 {showAddForm && (
                   <motion.div
@@ -167,60 +242,70 @@ export default function Scanner() {
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                   >
-                    <Card className="border-primary/20 shadow-lg shadow-primary/5">
-                      <CardContent className="p-5 space-y-5">
-                        <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                          Новая партия
-                        </h3>
+                    <Card>
+                      <CardContent className="p-5 space-y-4">
+                        <p className="text-sm font-semibold">Новая партия</p>
 
-                        {/* Expiry Mode Tabs */}
+                        {/* Номер партии */}
                         <div>
-                          <Label className="text-sm font-medium mb-2 block">Срок годности</Label>
-                          <Tabs value={expiryMode} onValueChange={(v) => setExpiryMode(v as "date" | "days")}>
-                            <TabsList className="w-full rounded-xl h-11 bg-muted p-1">
-                              <TabsTrigger
-                                value="date"
-                                className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm gap-2"
-                              >
-                                <CalendarIcon className="w-4 h-4" />
-                                Годен до (дата)
+                          <Label className="text-sm">Номер партии (необязательно)</Label>
+                          <Input
+                            placeholder="Например: ML-2026-003"
+                            value={batchNumber}
+                            onChange={(e) => setBatchNumber(e.target.value)}
+                            className="mt-1.5 h-11 rounded-xl font-mono"
+                          />
+                        </div>
+
+                        {/* Срок годности */}
+                        <div>
+                          <Label className="text-sm">Срок годности</Label>
+                          <Tabs
+                            value={expiryMode}
+                            onValueChange={(v) => setExpiryMode(v as "date" | "days")}
+                            className="mt-2"
+                          >
+                            <TabsList className="w-full rounded-xl">
+                              <TabsTrigger value="date"  className="flex-1 rounded-lg">
+                                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+                                Дата
                               </TabsTrigger>
-                              <TabsTrigger
-                                value="days"
-                                className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm gap-2"
-                              >
-                                <Clock className="w-4 h-4" />
-                                Годен (суток)
+                              <TabsTrigger value="days" className="flex-1 rounded-lg">
+                                Кол-во суток
                               </TabsTrigger>
                             </TabsList>
 
+                            {/* Выбор даты */}
                             <TabsContent value="date" className="mt-3">
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <Button
                                     variant="outline"
                                     className={cn(
-                                      "w-full h-12 justify-start text-left font-normal rounded-xl",
+                                      "w-full h-11 justify-start rounded-xl font-normal",
                                       !expiryDate && "text-muted-foreground"
                                     )}
                                   >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {expiryDate ? format(expiryDate, "dd MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                                    <CalendarIcon className="w-4 h-4 mr-2" />
+                                    {expiryDate
+                                      ? format(expiryDate, "dd MMMM yyyy", { locale: ru })
+                                      : "Выберите дату"}
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 rounded-xl" align="start">
+                                <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     mode="single"
                                     selected={expiryDate}
                                     onSelect={setExpiryDate}
-                                    disabled={(date) => date < new Date()}
+                                    disabled={(d) => d < new Date()}
                                     initialFocus
-                                    className={cn("p-3 pointer-events-auto")}
+                                    locale={ru}
                                   />
                                 </PopoverContent>
                               </Popover>
                             </TabsContent>
 
+                            {/* Количество суток */}
                             <TabsContent value="days" className="mt-3">
                               <div className="space-y-3">
                                 <div className="relative">
@@ -236,8 +321,6 @@ export default function Scanner() {
                                     суток
                                   </span>
                                 </div>
-
-                                {/* Quick presets */}
                                 <div className="flex gap-2 flex-wrap">
                                   {[3, 5, 7, 14, 30, 60, 90, 180].map((d) => (
                                     <button
@@ -253,11 +336,14 @@ export default function Scanner() {
                                     </button>
                                   ))}
                                 </div>
-
                                 {shelfDays && (
                                   <p className="text-xs text-muted-foreground">
-                                    Годен до: <span className="font-mono font-semibold text-foreground">
-                                      {format(addDays(new Date(), parseInt(shelfDays)), "dd.MM.yyyy")}
+                                    Годен до:{" "}
+                                    <span className="font-mono font-semibold text-foreground">
+                                      {format(
+                                        addDays(new Date(), parseInt(shelfDays)),
+                                        "dd.MM.yyyy"
+                                      )}
                                     </span>
                                   </p>
                                 )}
@@ -266,7 +352,7 @@ export default function Scanner() {
                           </Tabs>
                         </div>
 
-                        {/* Quantity & Location */}
+                        {/* Количество и место */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm">Количество</Label>
@@ -282,7 +368,7 @@ export default function Scanner() {
                           <div>
                             <Label className="text-sm">Место хранения</Label>
                             <Input
-                              placeholder={result.defaultLocation}
+                              placeholder={product.default_location ?? "Укажите место"}
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
                               className="mt-1.5 h-11 rounded-xl"
@@ -290,29 +376,27 @@ export default function Scanner() {
                           </div>
                         </div>
 
-                        {/* Preview */}
-                        {computedExpiryDate && (
+                        {/* Предпросмотр статуса */}
+                        {computedExpiryDate && previewStatus && (
                           <div className="p-3.5 rounded-xl bg-muted/60 border border-border">
-                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Предпросмотр</p>
+                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                              Предпросмотр
+                            </p>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <StatusBadge
-                                  status={calculateStatus(
-                                    new Date(),
-                                    Math.ceil((computedExpiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                                  )}
-                                  size="md"
-                                />
-                                <span className="text-sm font-medium">→ {format(computedExpiryDate, "dd.MM.yyyy")}</span>
+                                <StatusBadge status={previewStatus} size="md" />
+                                <span className="text-sm font-medium">
+                                  → {format(computedExpiryDate, "dd.MM.yyyy")}
+                                </span>
                               </div>
                               <span className="text-sm font-mono font-bold">
-                                {Math.ceil((computedExpiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} дн.
+                                {getDaysLeft(format(computedExpiryDate, "yyyy-MM-dd"))} дн.
                               </span>
                             </div>
                           </div>
                         )}
 
-                        {/* Actions */}
+                        {/* Кнопки */}
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -324,9 +408,17 @@ export default function Scanner() {
                           <Button
                             className="flex-1 h-11 rounded-xl shadow-md shadow-primary/20"
                             onClick={handleAddBatch}
-                            disabled={!computedExpiryDate || !quantity}
+                            disabled={
+                              !computedExpiryDate ||
+                              !quantity ||
+                              createBatch.isPending
+                            }
                           >
-                            <Check className="w-4 h-4 mr-2" />
+                            {createBatch.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4 mr-2" />
+                            )}
                             Сохранить
                           </Button>
                         </div>
@@ -336,38 +428,49 @@ export default function Scanner() {
                 )}
               </AnimatePresence>
 
-              {/* Existing Batches */}
+              {/* Текущие партии */}
               {productBatches.length > 0 && (
                 <Card>
                   <CardContent className="p-0">
                     <div className="px-5 py-3.5 border-b border-border">
-                      <p className="text-sm font-semibold">Текущие партии ({productBatches.length})</p>
+                      <p className="text-sm font-semibold">
+                        Текущие партии ({productBatches.length})
+                      </p>
                     </div>
                     <div className="divide-y divide-border">
                       {productBatches.map((b) => {
-                        const daysLeft = getDaysLeft(b.expirationDate);
-                        const pct = getPercentLeft(b.productionDate, b.product?.shelfLifeDays || 0);
+                        const daysLeft = getDaysLeft(b.expiration_date_effective);
+                        const pct = getPercentLeft(
+                          b.production_date,
+                          b.expiration_date_effective
+                        );
                         return (
-                          <div key={b.id} className="flex items-center justify-between px-5 py-3">
+                          <div
+                            key={b.id}
+                            className="flex items-center justify-between px-5 py-3"
+                          >
                             <div className="flex items-center gap-3">
-                              <StatusBadge status={b.currentStatus} />
-                              <span className="text-xs text-muted-foreground font-mono">#{b.batchNumber}</span>
+                              <StatusBadge status={b.current_status} />
+                              <span className="text-xs text-muted-foreground font-mono">
+                                #{b.batch_number ?? b.id.slice(0, 8)}
+                              </span>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full ${
-                                    b.currentStatus === "active" ? "bg-status-active"
-                                    : b.currentStatus === "hurry_up" ? "bg-status-hurry"
-                                    : b.currentStatus === "urgent_sale" ? "bg-status-urgent"
-                                    : "bg-status-expired"
-                                  }`}
+                                  className={`h-full rounded-full ${progressColors[b.current_status]}`}
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
-                              <span className={`text-sm font-mono font-bold w-10 text-right ${
-                                daysLeft <= 0 ? "text-status-urgent" : daysLeft <= 3 ? "text-status-hurry" : "text-foreground"
-                              }`}>
+                              <span
+                                className={`text-sm font-mono font-bold w-10 text-right ${
+                                  daysLeft <= 0
+                                    ? "text-status-urgent"
+                                    : daysLeft <= 3
+                                    ? "text-status-hurry"
+                                    : "text-foreground"
+                                }`}
+                              >
                                 {daysLeft <= 0 ? "0" : daysLeft}д
                               </span>
                             </div>
