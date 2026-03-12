@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,6 +61,23 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "status-active": {
+          DEFAULT: "hsl(var(--status-active))",
+          foreground: "hsl(var(--status-active-foreground))",
+        },
+        "status-hurry": {
+          DEFAULT: "hsl(var(--status-hurry))",
+          foreground: "hsl(var(--status-hurry-foreground))",
+        },
+        "status-urgent": {
+          DEFAULT: "hsl(var(--status-urgent))",
+          foreground: "hsl(var(--status-urgent-foreground))",
+        },
+        "status-expired": {
+          DEFAULT: "hsl(var(--status-expired))",
+          foreground: "hsl(var(--status-expired-foreground))",
+        },
+        "surface-elevated": "hsl(var(--surface-elevated))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,25 +86,22 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "pulse-status": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-status": "pulse-status 2s ease-in-out infinite",
       },
     },
   },
