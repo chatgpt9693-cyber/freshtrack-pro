@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StatusBadge } from "@/components/StatusBadge";
+import { AddProductDialog } from "@/components/AddProductDialog";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import {
   ScanBarcode, Search, CalendarIcon, Plus, Check,
   Package, Loader2, PackageX,
@@ -151,6 +153,22 @@ export default function Scanner() {
               className="pl-12 h-14 text-lg font-mono rounded-2xl bg-card border-border shadow-sm focus:shadow-md transition-shadow"
             />
           </div>
+          <BarcodeScannerDialog
+            onScan={(scannedBarcode) => {
+              setBarcode(scannedBarcode);
+              setSearchBarcode(scannedBarcode);
+              setShowAddForm(false);
+            }}
+            trigger={
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-14 px-4 rounded-2xl border-2 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+              >
+                <ScanBarcode className="w-5 h-5" />
+              </Button>
+            }
+          />
           <Button
             onClick={handleSearch}
             size="lg"
@@ -181,10 +199,15 @@ export default function Scanner() {
                   <p className="text-sm text-muted-foreground mt-1">
                     Штрихкод <span className="font-mono">{searchBarcode}</span> не зарегистрирован
                   </p>
-                  <Button variant="outline" className="mt-4 rounded-xl">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Добавить товар
-                  </Button>
+                  <AddProductDialog
+                    initialBarcode={searchBarcode}
+                    trigger={
+                      <Button variant="outline" className="mt-4 rounded-xl">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Добавить товар
+                      </Button>
+                    }
+                  />
                 </CardContent>
               </Card>
             </motion.div>

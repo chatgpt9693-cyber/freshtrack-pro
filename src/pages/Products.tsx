@@ -1,10 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Package, Loader2, PackageX } from "lucide-react";
+import { Search, Package, Loader2, PackageX, ScanBarcode } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useProducts } from "@/lib/queries";
 import { useBatches } from "@/lib/queries";
+import { AddProductDialog } from "@/components/AddProductDialog";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 
 export default function Products() {
   const [search, setSearch] = useState("");
@@ -27,14 +29,30 @@ export default function Products() {
             {!isLoading && <span> · {products.length} товаров</span>}
           </p>
         </motion.div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Поиск по названию, штрихкоду..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 rounded-xl bg-card"
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по названию, штрихкоду..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-11 rounded-xl bg-card"
+            />
+          </div>
+          <BarcodeScannerDialog
+            onScan={(barcode) => setSearch(barcode)}
+            title="Поиск товара по штрихкоду"
+            trigger={
+              <Button
+                variant="outline"
+                className="h-11 px-4 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+              >
+                <ScanBarcode className="w-4 h-4 mr-2" />
+                Сканировать
+              </Button>
+            }
           />
+          <AddProductDialog />
         </div>
       </div>
 
