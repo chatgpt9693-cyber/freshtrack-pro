@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Camera, CameraOff, Loader2, AlertCircle } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle } from "lucide-react";
+import { BrowserMultiFormatReader } from "@zxing/library";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CameraPermissionDialog } from "./CameraPermissionDialog";
-import { MobileBarcodeScanner } from "./MobileBarcodeScanner";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -14,381 +13,443 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [debugImage, setDebugImage] = useState<string | null>(null);
+
   // Определяем мобильное устройство
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
-  // Для мобильных устройств используем специальный компонент
-  if (isMobile) {
-    return (
-      <MobileBarcodeScanner 
-        onScan={onScan}
-        onError={onError}
-        className={className}
-      />
-    );
-  }
 
-  // Для десктопа - обычный веб-камера сканер
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    // Инициализируем сканер
-    readerRef.current = new BrowserMultiFormatReader();
-    
-    // Проверяем HTTPS для продакшена
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-      setError("Для доступа к камере требуется HTTPS соединение. Используйте безопасное соединение.");
-      setHasPermission(false);
-    }
-    
-    return () => {
-      stopScanning();
-    };
-  }, []);
-
-  const requestCameraAccess = () => {
-    setShowPermissionDialog(true);
+  const handleCameraCapture = () => {
+    console.log("Открываем камеру, мобильное устройство:", isMobile);
+    setDebugImage(null); // Сбрасываем отладочное изображение
+    fileInputRef.current?.click();
   };
 
-  const handlePermissionAllow = () => {
-    actuallyStartScanning();
+  const handleGallerySelect = () => {
+    console.log("Открываем галерею");
+    setDebugImage(null); // Сбрасываем отладочное изображение
+    galleryInputRef.current?.click();
   };
 
-  const handlePermissionDeny = () => {
-    setError("Доступ к камере отклонен пользователем");
-    setHasPermission(false);
-    onError?.("Доступ к камере отклонен пользователем");
-  };
+  const processImage = async (file: File) => {
+    setIsProcessing(true);
+    setLastResult(null);
 
-  const actuallyStartScanning = async () => {
-    if (!videoRef.current || !readerRef.current) return;
+    let imageUrl: string | null = null;
 
     try {
-      setError(null);
-      setIsScanning(true);
-
-      // Проверяем поддержку MediaDevices API
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("MediaDevices API не поддерживается в этом браузере");
-      }
-
-      // Специальные настройки для мобильных устройств
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log("Начинаем обработку изображения:", file.name, file.size, file.type);
       
-      let constraints;
+      // Создаем URL для изображения
+      imageUrl = URL.createObjectURL(file);
       
-      if (isMobile) {
-        // Для мобильных - приоритет задней камере и меньшее разрешение
-        constraints = {
-          video: {
-            facingMode: { exact: "environment" }, // Строго задняя камера
-            width: { ideal: 640, max: 1280 },
-            height: { ideal: 480, max: 720 },
-          },
+      // Создаем изображение
+      const img = new Image();
+      
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          console.log("Изображение загружено:", img.width, "x", img.height);
+          resolve();
         };
-      } else {
-        // Для десктопа - стандартные настройки
-        constraints = {
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 640, min: 320 },
-            height: { ideal: 480, min: 240 },
-          },
+        img.onerror = (e) => {
+          console.error("Ошибка загрузки изображения:", e);
+          reject(new Error("Не удалось загрузить изображение"));
         };
-      }
-
-      let stream: MediaStream;
-      
-      try {
-        // Первая попытка с оптимальными настройками
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (firstError: any) {
-        console.warn("Первая попытка неудачна:", firstError);
-        
-        if (isMobile) {
-          // Для мобильных - пробуем любую камеру
-          try {
-            constraints = {
-              video: {
-                facingMode: "environment", // Без exact
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-              },
-            };
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-          } catch (secondError: any) {
-            console.warn("Вторая попытка неудачна:", secondError);
-            // Последняя попытка - любая камера
-            stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: "environment" } 
-            });
-          }
-        } else {
-          // Для десктопа - базовые настройки
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          } catch (secondError: any) {
-            console.warn("Не удалось получить камеру с базовыми настройками:", secondError);
-            throw secondError;
-          }
-        }
-      }
-
-      streamRef.current = stream;
-      setHasPermission(true);
-
-      // Подключаем поток к видео элементу
-      videoRef.current.srcObject = stream;
-      
-      // Для мобильных устройств - дополнительные настройки
-      if (isMobile) {
-        videoRef.current.setAttribute('playsinline', 'true');
-        videoRef.current.setAttribute('webkit-playsinline', 'true');
-      }
-      
-      // Ждем загрузки метаданных
-      await new Promise((resolve, reject) => {
-        if (!videoRef.current) return reject(new Error("Video element not found"));
-        
-        const timeoutId = setTimeout(() => {
-          reject(new Error("Timeout loading video"));
-        }, 15000); // Увеличиваем таймаут для мобильных
-        
-        videoRef.current.onloadedmetadata = () => {
-          clearTimeout(timeoutId);
-          resolve(undefined);
-        };
-        videoRef.current.onerror = (err) => {
-          clearTimeout(timeoutId);
-          reject(err);
-        };
+        img.crossOrigin = "anonymous"; // Для обработки изображений
+        img.src = imageUrl!;
       });
 
-      await videoRef.current.play();
+      // Создаем canvas для предварительной обработки изображения
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error("Не удалось создать контекст canvas");
+      }
 
-      // Начинаем сканирование
-      readerRef.current.decodeFromVideoDevice(
-        undefined,
-        videoRef.current,
-        (result, error) => {
-          if (result) {
-            const barcode = result.getText().trim();
-            if (barcode) {
-              // Вибрация на мобильных при успешном сканировании
-              if (isMobile && 'vibrate' in navigator) {
-                navigator.vibrate(200);
+      // Для мобильных устройств используем другой подход к размерам
+      let targetWidth = img.width;
+      let targetHeight = img.height;
+      
+      if (isMobile) {
+        // На мобильных ограничиваем размер для лучшей производительности
+        const maxSize = 1200;
+        if (img.width > maxSize || img.height > maxSize) {
+          const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+          targetWidth = Math.floor(img.width * ratio);
+          targetHeight = Math.floor(img.height * ratio);
+        }
+      }
+
+      // Устанавливаем размеры canvas
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      
+      // Рисуем изображение на canvas с масштабированием
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      
+      // Применяем более агрессивные фильтры для мобильных
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      if (isMobile) {
+        // Для мобильных: более сильная обработка
+        // 1. Увеличиваем контрастность
+        const contrast = 2.0;
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        
+        // 2. Применяем пороговую обработку для четкости
+        for (let i = 0; i < data.length; i += 4) {
+          // Конвертируем в оттенки серого
+          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          
+          // Применяем контрастность
+          const enhanced = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
+          
+          // Пороговая обработка для четких черно-белых линий
+          const threshold = enhanced > 128 ? 255 : 0;
+          
+          data[i] = threshold;     // Red
+          data[i + 1] = threshold; // Green
+          data[i + 2] = threshold; // Blue
+          // Alpha остается без изменений
+        }
+        
+        console.log("Применена агрессивная обработка для мобильного устройства");
+      } else {
+        // Для десктопа: мягкая обработка
+        const contrast = 1.5;
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));     // Red
+          data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128)); // Green
+          data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128)); // Blue
+        }
+        
+        console.log("Применена стандартная обработка для десктопа");
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Сохраняем обработанное изображение для отладки
+      const debugDataUrl = canvas.toDataURL('image/png');
+      setDebugImage(debugDataUrl);
+      
+      console.log("Изображение обработано, размер:", targetWidth, "x", targetHeight);
+
+      // Инициализируем сканер с дополнительными настройками
+      const codeReader = new BrowserMultiFormatReader();
+      
+      console.log("Сканер инициализирован, начинаем распознавание...");
+      
+      // Пробуем разные подходы к сканированию
+      let result = null;
+      
+      if (isMobile) {
+        // Для мобильных: множественные попытки с разными настройками
+        console.log("Мобильное устройство: пробуем разные методы сканирования");
+        
+        try {
+          // 1. Пробуем обработанное изображение
+          const processedImg = new Image();
+          const canvasDataUrl = canvas.toDataURL('image/png');
+          
+          await new Promise<void>((resolve, reject) => {
+            processedImg.onload = () => resolve();
+            processedImg.onerror = reject;
+            processedImg.src = canvasDataUrl;
+          });
+          
+          result = await codeReader.decodeFromImageElement(processedImg);
+          console.log("Штрихкод найден на обработанном изображении (мобильный)");
+        } catch (processedError) {
+          console.log("Обработанное изображение не сработало, пробуем оригинал");
+          
+          try {
+            // 2. Пробуем оригинальное изображение
+            result = await codeReader.decodeFromImageElement(img);
+            console.log("Штрихкод найден на оригинальном изображении (мобильный)");
+          } catch (originalError) {
+            console.log("Оригинал не сработал, пробуем с поворотом");
+            
+            // 3. Пробуем повернутое изображение (для случаев неправильной ориентации)
+            const rotatedCanvas = document.createElement('canvas');
+            const rotatedCtx = rotatedCanvas.getContext('2d');
+            
+            if (rotatedCtx) {
+              rotatedCanvas.width = img.height;
+              rotatedCanvas.height = img.width;
+              
+              rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+              rotatedCtx.rotate(Math.PI / 2);
+              rotatedCtx.drawImage(img, -img.width / 2, -img.height / 2);
+              
+              const rotatedImg = new Image();
+              const rotatedDataUrl = rotatedCanvas.toDataURL('image/png');
+              
+              await new Promise<void>((resolve, reject) => {
+                rotatedImg.onload = () => resolve();
+                rotatedImg.onerror = reject;
+                rotatedImg.src = rotatedDataUrl;
+              });
+              
+              try {
+                result = await codeReader.decodeFromImageElement(rotatedImg);
+                console.log("Штрихкод найден на повернутом изображении");
+              } catch (rotatedError) {
+                throw new Error("Штрихкод не найден ни одним из методов");
               }
-              onScan(barcode);
+            } else {
+              throw new Error("Не удалось создать canvas для поворота");
             }
           }
-          
-          if (error && !(error instanceof NotFoundException)) {
-            console.warn("Ошибка сканирования:", error);
-          }
         }
-      );
-    } catch (err: any) {
-      console.error("Ошибка доступа к камере:", err);
-      let errorMessage = "Не удалось получить доступ к камере";
+      } else {
+        // Для десктопа: стандартный подход
+        try {
+          // Создаем новое изображение из canvas
+          const processedImg = new Image();
+          const canvasDataUrl = canvas.toDataURL('image/png');
+          
+          await new Promise<void>((resolve, reject) => {
+            processedImg.onload = () => resolve();
+            processedImg.onerror = reject;
+            processedImg.src = canvasDataUrl;
+          });
+          
+          // Сначала пробуем canvas с улучшенным контрастом
+          result = await codeReader.decodeFromImageElement(processedImg);
+          console.log("Штрихкод найден на обработанном изображении");
+        } catch (canvasError) {
+          console.log("Не удалось найти на обработанном изображении, пробуем оригинал");
+          // Если не получилось, пробуем оригинальное изображение
+          result = await codeReader.decodeFromImageElement(img);
+          console.log("Штрихкод найден на оригинальном изображении");
+        }
+      }
+      console.log("Результат сканирования:", result);
       
-      if (err.name === "NotAllowedError") {
-        errorMessage = "Доступ к камере запрещен. Разрешите доступ в настройках браузера или нажмите 'Разрешить' во всплывающем окне.";
-        setHasPermission(false);
-      } else if (err.name === "NotFoundError") {
-        errorMessage = "Камера не найдена. Убедитесь, что на устройстве есть камера.";
-      } else if (err.name === "NotSupportedError") {
-        errorMessage = "Камера не поддерживается. Попробуйте обновить браузер.";
-      } else if (err.name === "NotReadableError") {
-        errorMessage = "Камера занята другим приложением. Закройте другие приложения и попробуйте снова.";
-      } else if (err.name === "OverconstrainedError") {
-        errorMessage = "Камера не поддерживает требуемые параметры. Попробуйте другую камеру.";
-      } else if (err.message?.includes("MediaDevices API")) {
-        errorMessage = "Ваш браузер не поддерживает доступ к камере. Используйте Chrome, Firefox или Safari.";
-      } else if (err.message?.includes("HTTPS")) {
-        errorMessage = "Для доступа к камере требуется HTTPS соединение.";
+      if (result) {
+        const barcode = result.getText().trim();
+        console.log("Найден штрихкод:", barcode);
+        
+        if (barcode) {
+          setLastResult(barcode);
+          
+          console.log("Вызываем onScan с кодом:", barcode);
+          onScan(barcode);
+          
+          // Вибрация при успешном сканировании
+          if ('vibrate' in navigator) {
+            navigator.vibrate(200);
+          }
+          
+          toast.success("Штрихкод найден!", {
+            description: `Код: ${barcode}`,
+          });
+        } else {
+          throw new Error("Пустой результат сканирования");
+        }
+      } else {
+        throw new Error("Штрихкод не найден на изображении");
       }
       
-      setError(errorMessage);
-      setIsScanning(false);
+    } catch (error: any) {
+      console.error("Ошибка сканирования:", error);
+      console.error("Тип ошибки:", error.constructor.name);
+      console.error("Сообщение ошибки:", error.message);
+      
+      let errorMessage = "Не удалось отсканировать штрихкод";
+      
+      if (error.message?.includes("не найден") || error.name === "NotFoundException") {
+        errorMessage = "Штрихкод не найден на изображении. Попробуйте сделать фото четче и убедитесь, что штрихкод хорошо виден.";
+      } else if (error.message?.includes("формат")) {
+        errorMessage = "Неподдерживаемый формат штрихкода.";
+      } else if (error.message?.includes("загрузить")) {
+        errorMessage = "Не удалось загрузить изображение. Попробуйте другое фото.";
+      } else if (error.name === "ChecksumException") {
+        errorMessage = "Штрихкод поврежден или нечеткий. Попробуйте сделать более четкое фото.";
+      } else if (error.name === "FormatException") {
+        errorMessage = "Неверный формат штрихкода. Убедитесь, что это действительно штрихкод.";
+      }
+      
+      toast.error("Ошибка сканирования", {
+        description: errorMessage,
+      });
+      
       onError?.(errorMessage);
+    } finally {
+      // Очищаем URL
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+      setIsProcessing(false);
     }
   };
 
-  const stopScanning = () => {
-    try {
-      // Останавливаем сканер
-      if (readerRef.current) {
-        readerRef.current.reset();
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    console.log("Выбран файл:", file?.name, file?.type, file?.size);
+    
+    if (file) {
+      // Проверяем тип файла
+      if (!file.type.startsWith('image/')) {
+        toast.error("Неверный тип файла", {
+          description: "Выберите изображение (JPG, PNG, WebP)",
+        });
+        return;
       }
-
-      // Останавливаем видео поток
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+      
+      // Проверяем размер файла (максимум 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Файл слишком большой", {
+          description: "Максимальный размер: 10MB",
+        });
+        return;
       }
-
-      // Очищаем видео элемент
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-
-      setIsScanning(false);
-    } catch (err) {
-      console.error("Ошибка при остановке сканирования:", err);
+      
+      processImage(file);
     }
-  };
-
-  const toggleScanning = () => {
-    if (isScanning) {
-      stopScanning();
-    } else {
-      // Показываем диалог разрешений вместо прямого запуска
-      requestCameraAccess();
-    }
+    
+    // Сбрасываем input для возможности выбора того же файла
+    event.target.value = '';
   };
 
   return (
     <Card className={cn("overflow-hidden", className)}>
-      <CardContent className="p-0">
-        <div className="relative">
-          {/* Видео элемент */}
-          <video
-            ref={videoRef}
-            className={cn(
-              "w-full aspect-video bg-black object-cover",
-              !isScanning && "hidden"
-            )}
-            playsInline
-            webkit-playsinline="true"
-            muted
-            autoPlay
-          />
+      <CardContent className="p-6 space-y-4">
+        {/* Скрытый input для камеры */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment" // Предпочитаем заднюю камеру
+          onChange={handleFileChange}
+          className="hidden"
+          multiple={false}
+        />
 
-          {/* Плейсхолдер когда камера не активна */}
-          {!isScanning && (
-            <div className="w-full aspect-video bg-muted flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <Camera className="w-12 h-12 text-muted-foreground mx-auto" />
-                <p className="text-sm text-muted-foreground">
-                  Нажмите кнопку для запуска сканера
-                </p>
-              </div>
-            </div>
-          )}
+        {/* Скрытый input для галереи */}
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+          multiple={false}
+        />
 
-          {/* Оверлей с рамкой сканирования */}
-          {isScanning && (
-            <div className="absolute inset-0 pointer-events-none">
-              {/* Затемнение по краям */}
-              <div className="absolute inset-0 bg-black/30" />
-              
-              {/* Рамка сканирования */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-2 border-primary rounded-lg bg-transparent">
-                {/* Углы рамки */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-l-4 border-t-4 border-primary rounded-tl-lg" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-r-4 border-t-4 border-primary rounded-tr-lg" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-l-4 border-b-4 border-primary rounded-bl-lg" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-r-4 border-b-4 border-primary rounded-br-lg" />
-                
-                {/* Анимированная линия сканирования */}
-                <div className="absolute inset-x-0 top-0 h-0.5 bg-primary animate-pulse" 
-                     style={{ 
-                       animation: "scan 2s ease-in-out infinite",
-                     }} 
-                />
-              </div>
-              
-              {/* Подсказка */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1.5 rounded-lg text-sm">
-                Наведите камеру на штрихкод
-              </div>
-            </div>
-          )}
+        {/* Основная кнопка */}
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+            <Camera className="w-10 h-10 text-primary" />
+          </div>
+          
+          <div>
+            <h3 className="font-semibold text-lg">Сканирование штрихкода</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isMobile 
+                ? "Сделайте фото штрихкода или выберите из галереи"
+                : "Сделайте фото штрихкода для автоматического распознавания"
+              }
+            </p>
+          </div>
 
-          {/* Ошибка */}
-          {error && (
-            <div className="absolute inset-0 bg-red-50 flex items-center justify-center p-4">
-              <div className="text-center space-y-3 max-w-sm">
-                <AlertCircle className="w-10 h-10 text-red-500 mx-auto" />
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-red-800">Ошибка доступа к камере</p>
-                  <p className="text-xs text-red-700">{error}</p>
-                </div>
-                {hasPermission === false && (
-                  <div className="space-y-2">
-                    <div className="p-2 bg-red-100 border border-red-200 rounded text-xs text-red-800">
-                      <p className="font-medium">Как разрешить доступ:</p>
-                      <p>1. Нажмите на иконку 🔒 или 📷 в адресной строке</p>
-                      <p>2. Выберите "Разрешить" для камеры</p>
-                      <p>3. Обновите страницу</p>
-                    </div>
-                    <Button
-                      onClick={() => window.location.reload()}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      Обновить страницу
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Кнопки управления */}
-        <div className="p-4 border-t">
           <Button
-            onClick={toggleScanning}
-            className="w-full"
-            variant={isScanning ? "destructive" : "default"}
-            disabled={hasPermission === false}
+            onClick={handleCameraCapture}
+            disabled={isProcessing}
+            size="lg"
+            className="w-full h-12"
           >
-            {isScanning ? (
+            {isProcessing ? (
               <>
-                <CameraOff className="w-4 h-4 mr-2" />
-                Остановить сканирование
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Обработка изображения...
               </>
             ) : (
               <>
-                <Camera className="w-4 h-4 mr-2" />
-                Запустить сканер
+                <Camera className="w-5 h-5 mr-2" />
+                {isMobile ? "Сделать фото" : "Открыть камеру"}
               </>
             )}
           </Button>
         </div>
-      </CardContent>
 
-      {/* Диалог разрешений */}
-      <CameraPermissionDialog
-        open={showPermissionDialog}
-        onOpenChange={setShowPermissionDialog}
-        onAllow={handlePermissionAllow}
-        onDeny={handlePermissionDeny}
-      />
+        {/* Результат сканирования */}
+        {lastResult && (
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-800">Штрихкод найден:</p>
+              <code className="text-xs font-mono text-green-700">{lastResult}</code>
+            </div>
+          </div>
+        )}
+
+        {/* Отладочное изображение (только для мобильных) */}
+        {debugImage && isMobile && (
+          <div className="border rounded-lg p-3 bg-gray-50">
+            <p className="text-xs font-medium mb-2">Обработанное изображение:</p>
+            <img 
+              src={debugImage} 
+              alt="Обработанное изображение" 
+              className="w-full max-w-xs mx-auto border rounded"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Так видит изображение сканер
+            </p>
+          </div>
+        )}
+
+        {/* Альтернативный способ */}
+        <div className="border-t pt-4">
+          <Button
+            onClick={handleGallerySelect}
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={isProcessing}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Выбрать фото из галереи
+          </Button>
+        </div>
+
+        {/* Советы */}
+        <div className="bg-muted/50 p-3 rounded-lg">
+          <p className="text-xs font-medium mb-2">💡 Советы для лучшего результата:</p>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            <li>• Держите камеру ровно над штрихкодом</li>
+            <li>• Убедитесь, что штрихкод хорошо освещен</li>
+            <li>• Избегайте бликов и теней</li>
+            <li>• Штрихкод должен занимать большую часть кадра</li>
+            <li>• Убедитесь, что изображение четкое (не размытое)</li>
+            {isMobile && (
+              <>
+                <li>• На мобильном: держите телефон устойчиво</li>
+                <li>• Попробуйте разные углы наклона</li>
+                <li>• Используйте хорошее освещение</li>
+              </>
+            )}
+          </ul>
+        </div>
+
+        {/* Поддерживаемые форматы */}
+        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <p className="text-xs font-medium mb-2 text-blue-800">📋 Поддерживаемые форматы:</p>
+          <div className="text-xs text-blue-700 grid grid-cols-2 gap-1">
+            <span>• EAN-13, EAN-8</span>
+            <span>• UPC-A, UPC-E</span>
+            <span>• Code 128, Code 39</span>
+            <span>• QR Code</span>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
-}
-
-// CSS анимация для линии сканирования
-const scanAnimation = `
-@keyframes scan {
-  0% { top: 0; }
-  50% { top: calc(100% - 2px); }
-  100% { top: 0; }
-}
-`;
-
-// Добавляем стили в head
-if (typeof document !== "undefined") {
-  const style = document.createElement("style");
-  style.textContent = scanAnimation;
-  document.head.appendChild(style);
 }

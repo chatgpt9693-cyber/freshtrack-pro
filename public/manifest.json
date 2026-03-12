@@ -15,67 +15,6 @@
       "src": "/favicon.ico",
       "sizes": "16x16 32x32",
       "type": "image/x-icon"
-    },
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Сканер штрихкодов",
-      "short_name": "Сканер",
-      "description": "Быстрое сканирование штрихкодов",
-      "url": "/scanner",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "32x32"
-        }
-      ]
-    },
-    {
-      "name": "Добавить товар",
-      "short_name": "Добавить",
-      "description": "Добавить новый товар",
-      "url": "/products?add=true",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "32x32"
-        }
-      ]
-    }
-  ],
-  "share_target": {
-    "action": "/scanner",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "barcode",
-      "url": "url"
-    }
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+barcode",
-      "url": "/scanner?code=%s"
-    }
-  ],
-  "file_handlers": [
-    {
-      "action": "/scanner",
-      "accept": {
-        "image/*": [".jpg", ".jpeg", ".png", ".webp"]
-      }
     }
   ]
 }

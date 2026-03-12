@@ -1,14 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, Camera, Smartphone, AlertTriangle } from "lucide-react";
-import { CameraDiagnostics } from "./CameraDiagnostics";
-import { CameraSettings } from "./CameraSettings";
-import { MobileCameraInstructions } from "./MobileCameraInstructions";
+import { Info, Camera, Smartphone } from "lucide-react";
 
 export function ScannerInfo() {
-  // Определяем мобильное устройство
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
   const supportedFormats = [
     { name: "EAN-13", description: "Европейский стандарт (13 цифр)" },
     { name: "EAN-8", description: "Короткий европейский код (8 цифр)" },
@@ -19,23 +13,15 @@ export function ScannerInfo() {
   ];
 
   const tips = [
-    "Держите камеру на расстоянии 10-20 см от штрихкода",
+    "Держите камеру ровно над штрихкодом",
     "Убедитесь, что штрихкод хорошо освещен",
     "Избегайте бликов и теней на поверхности кода",
-    "Держите устройство ровно, параллельно штрихкоду",
-    "Дождитесь фокусировки камеры перед сканированием",
+    "Штрихкод должен занимать большую часть кадра",
+    "Дождитесь четкого изображения перед съемкой",
   ];
 
   return (
     <div className="space-y-4">
-      {/* Диагностика камеры */}
-      <CameraDiagnostics />
-
-      {/* Мобильные инструкции */}
-      {isMobile && <MobileCameraInstructions />}
-
-      {/* Настройки камеры */}
-      <CameraSettings />
 
       {/* Поддерживаемые форматы */}
       <Card>
@@ -91,10 +77,10 @@ export function ScannerInfo() {
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Современный браузер с поддержкой WebRTC</p>
-            <p>• Разрешение на использование камеры</p>
-            <p>• HTTPS соединение (для продакшена)</p>
-            <p>• Камера с автофокусом (рекомендуется)</p>
+            <p>• Современный браузер с поддержкой File API</p>
+            <p>• Камера на устройстве для съемки фото</p>
+            <p>• Хорошее освещение для четких снимков</p>
+            <p>• Поддержка форматов изображений: JPG, PNG, WebP</p>
           </div>
         </CardContent>
       </Card>

@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { ScannerInfo } from "./ScannerInfo";
-import { CameraPermissionStatus } from "./CameraPermissionStatus";
 import { ScanBarcode, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,8 +28,13 @@ export function BarcodeScannerDialog({
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
   const handleScan = (barcode: string) => {
+    console.log("BarcodeScannerDialog.handleScan вызван с:", barcode);
+    
     // Избегаем дублирования при быстром сканировании
-    if (lastScanned === barcode) return;
+    if (lastScanned === barcode) {
+      console.log("Дублирование штрихкода, пропускаем");
+      return;
+    }
     
     setLastScanned(barcode);
     
@@ -39,7 +43,10 @@ export function BarcodeScannerDialog({
       duration: 2000,
     });
     
+    console.log("Вызываем внешний onScan с:", barcode);
     onScan(barcode);
+    
+    console.log("Закрываем диалог");
     setOpen(false);
     
     // Сбрасываем последний отсканированный код через некоторое время
@@ -86,9 +93,6 @@ export function BarcodeScannerDialog({
             </TabsList>
             
             <TabsContent value="scanner" className="space-y-4 mt-4">
-              {/* Статус разрешений */}
-              <CameraPermissionStatus className="mb-4" />
-              
               <BarcodeScanner 
                 onScan={handleScan}
                 onError={handleError}
