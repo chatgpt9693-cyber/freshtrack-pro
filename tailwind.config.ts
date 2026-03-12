@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
-        mono: ["IBM Plex Mono", "monospace"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -63,23 +63,27 @@ export default {
         },
         "status-active": {
           DEFAULT: "hsl(var(--status-active))",
+          bg: "hsl(var(--status-active-bg))",
           foreground: "hsl(var(--status-active-foreground))",
         },
         "status-hurry": {
           DEFAULT: "hsl(var(--status-hurry))",
+          bg: "hsl(var(--status-hurry-bg))",
           foreground: "hsl(var(--status-hurry-foreground))",
         },
         "status-urgent": {
           DEFAULT: "hsl(var(--status-urgent))",
+          bg: "hsl(var(--status-urgent-bg))",
           foreground: "hsl(var(--status-urgent-foreground))",
         },
         "status-expired": {
           DEFAULT: "hsl(var(--status-expired))",
+          bg: "hsl(var(--status-expired-bg))",
           foreground: "hsl(var(--status-expired-foreground))",
         },
-        "surface-elevated": "hsl(var(--surface-elevated))",
       },
       borderRadius: {
+        xl: "calc(var(--radius) + 4px)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
@@ -95,13 +99,23 @@ export default {
         },
         "pulse-status": {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+          "50%": { opacity: "0.5" },
+        },
+        "slide-up": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-status": "pulse-status 2s ease-in-out infinite",
+        "slide-up": "slide-up 0.4s ease-out",
+        "fade-in": "fade-in 0.3s ease-out",
       },
     },
   },
