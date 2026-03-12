@@ -25,6 +25,7 @@ import { Plus, Loader2, Package, ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateProduct, useProductCategories, useProductByBarcode } from "@/lib/queries";
 import { BarcodeScannerDialog } from "./BarcodeScannerDialog";
+import { VoiceInput } from "./VoiceInput";
 import type { ProductInsert } from "@/types/database";
 
 // Схема валидации
@@ -232,7 +233,17 @@ export function AddProductDialog({ trigger, initialBarcode }: AddProductDialogPr
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Название товара *</FormLabel>
+                  <FormLabel className="flex items-center justify-between">
+                    Название товара *
+                    <VoiceInput
+                      onResult={(text) => {
+                        field.onChange(text);
+                        toast.success("Название добавлено голосом", {
+                          description: text,
+                        });
+                      }}
+                    />
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Молоко 3.2%" {...field} />
                   </FormControl>
@@ -247,7 +258,17 @@ export function AddProductDialog({ trigger, initialBarcode }: AddProductDialogPr
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Описание</FormLabel>
+                  <FormLabel className="flex items-center justify-between">
+                    Описание
+                    <VoiceInput
+                      onResult={(text) => {
+                        field.onChange(text);
+                        toast.success("Описание добавлено голосом", {
+                          description: text,
+                        });
+                      }}
+                    />
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Дополнительная информация о товаре..."
