@@ -53,8 +53,23 @@ export default function Scanner() {
     product?.id ?? null
   );
 
-  // Пороги для предпросмотра статуса
-  const { data: thresholds } = useCategoryThresholds();
+  // Пороги для предпросмотра статуса (с fallback значениями)
+  const { data: thresholds, error: thresholdsError } = useCategoryThresholds();
+  
+  // Логируем ошибку доступа к настройкам
+  if (thresholdsError) {
+    console.warn("Не удалось загрузить настройки порогов:", thresholdsError);
+  }
+  
+  // Значения по умолчанию, если нет доступа к настройкам
+  const defaultThresholds = {
+    hurry_up_percent: 30.0,
+    hurry_up_days_min: 7,
+    urgent_sale_percent: 10.0,
+    urgent_sale_days_min: 3,
+  };
+  
+  const effectiveThresholds = thresholds || defaultThresholds;
 
   // Мутация создания партии
   const createBatch = useCreateBatch();
@@ -76,11 +91,11 @@ export default function Scanner() {
 
   // Статус предпросмотра для новой партии
   const previewStatus =
-    computedExpiryDate && thresholds
+    computedExpiryDate && effectiveThresholds
       ? calculateStatus(
           format(computedExpiryDate, "yyyy-MM-dd"),
           format(new Date(), "yyyy-MM-dd"),
-          thresholds
+          effectiveThresholds
         )
       : null;
 

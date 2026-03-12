@@ -256,6 +256,10 @@ export function useCategoryThresholds() {
     queryKey: queryKeys.thresholds.current(),
     queryFn:  thresholdsApi.get,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
+    retryOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: false, // Временно отключаем до исправления БД
   });
 }
 

@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search, Package, Loader2, PackageX, ScanBarcode } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
