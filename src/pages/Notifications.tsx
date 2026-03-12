@@ -1,13 +1,14 @@
 import { notificationLogs } from "@/lib/mock-data";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Mail, MessageCircle, Smartphone, Bell } from "lucide-react";
+import { Mail, MessageCircle, Smartphone, Bell, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { motion } from "framer-motion";
 
-const channelIcons = {
-  email: Mail,
-  telegram: MessageCircle,
-  sms: Smartphone,
-  push: Bell,
+const channelConfig = {
+  email: { icon: Mail, label: "Email", color: "text-primary" },
+  telegram: { icon: MessageCircle, label: "Telegram", color: "text-[hsl(200,80%,50%)]" },
+  sms: { icon: Smartphone, label: "SMS", color: "text-status-active" },
+  push: { icon: Bell, label: "Push", color: "text-status-hurry" },
 };
 
 const typeLabels = {
@@ -16,51 +17,64 @@ const typeLabels = {
   expired: { label: "Просрочено", className: "status-badge-expired" },
 };
 
-const statusLabels = {
-  sent: { label: "Отправлено", className: "text-muted-foreground" },
-  delivered: { label: "Доставлено", className: "text-status-active" },
-  failed: { label: "Ошибка", className: "text-status-urgent" },
+const statusIcons = {
+  sent: { icon: Clock, className: "text-muted-foreground", label: "Отправлено" },
+  delivered: { icon: CheckCircle2, className: "text-status-active", label: "Доставлено" },
+  failed: { icon: XCircle, className: "text-status-urgent", label: "Ошибка" },
 };
 
 export default function Notifications() {
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Уведомления</h1>
+    <div className="p-4 md:p-8 space-y-6 gradient-mesh min-h-screen">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Уведомления</h1>
         <p className="text-muted-foreground text-sm mt-1">Журнал отправленных алертов</p>
-      </div>
+      </motion.div>
 
-      <div className="space-y-3">
+      <motion.div
+        className="space-y-2.5"
+        initial="hidden"
+        animate="show"
+        variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }}
+      >
         {notificationLogs.map((log) => {
-          const ChannelIcon = channelIcons[log.channel];
-          const typeConfig = typeLabels[log.type];
-          const statusConf = statusLabels[log.status];
+          const channel = channelConfig[log.channel];
+          const ChannelIcon = channel.icon;
+          const typeConf = typeLabels[log.type];
+          const statusConf = statusIcons[log.status];
+          const StatusIcon = statusConf.icon;
 
           return (
-            <Card key={log.id}>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                  <ChannelIcon className="w-5 h-5 text-secondary-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeConfig.className}`}>
-                      {typeConfig.label}
-                    </span>
-                    <span className="text-sm font-medium truncate">{log.productName}</span>
+            <motion.div
+              key={log.id}
+              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+            >
+              <Card className="hover:shadow-md transition-all duration-200">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0`}>
+                    <ChannelIcon className={`w-5 h-5 ${channel.color}`} />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {log.channel.toUpperCase()} · {format(log.sentAt, "dd.MM.yyyy HH:mm")}
-                  </p>
-                </div>
-                <span className={`text-xs font-medium ${statusConf.className}`}>
-                  {statusConf.label}
-                </span>
-              </CardContent>
-            </Card>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${typeConf.className}`}>
+                        {typeConf.label}
+                      </span>
+                      <span className="text-sm font-medium truncate">{log.productName}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {channel.label} · {format(log.sentAt, "dd.MM.yyyy HH:mm")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <StatusIcon className={`w-4 h-4 ${statusConf.className}`} />
+                    <span className={`text-xs font-medium ${statusConf.className}`}>{statusConf.label}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

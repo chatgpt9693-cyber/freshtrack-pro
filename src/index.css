@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,106 +6,112 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
+    --background: 225 15% 96%;
+    --foreground: 225 30% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 225 30% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 225 30% 8%;
 
-    --primary: 220 70% 45%;
+    --primary: 235 80% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 225 20% 93%;
+    --secondary-foreground: 225 25% 25%;
 
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 225 15% 94%;
+    --muted-foreground: 225 10% 48%;
 
-    --accent: 220 15% 90%;
-    --accent-foreground: 220 25% 15%;
+    --accent: 235 60% 96%;
+    --accent-foreground: 235 60% 40%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 220 70% 45%;
+    --border: 225 15% 90%;
+    --input: 225 15% 90%;
+    --ring: 235 80% 60%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* FreshTrack status colors */
-    --status-active: 142 70% 45%;
-    --status-active-foreground: 0 0% 100%;
-    --status-hurry: 45 93% 47%;
-    --status-hurry-foreground: 0 0% 10%;
-    --status-urgent: 0 84% 55%;
-    --status-urgent-foreground: 0 0% 100%;
-    --status-expired: 0 0% 20%;
-    --status-expired-foreground: 0 0% 80%;
+    --status-active: 152 60% 48%;
+    --status-active-bg: 152 60% 95%;
+    --status-active-foreground: 152 60% 20%;
+    --status-hurry: 38 92% 50%;
+    --status-hurry-bg: 38 92% 95%;
+    --status-hurry-foreground: 38 70% 22%;
+    --status-urgent: 0 76% 57%;
+    --status-urgent-bg: 0 76% 96%;
+    --status-urgent-foreground: 0 60% 25%;
+    --status-expired: 225 10% 35%;
+    --status-expired-bg: 225 10% 92%;
+    --status-expired-foreground: 225 10% 20%;
 
     /* Sidebar */
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 220 10% 80%;
-    --sidebar-primary: 220 70% 55%;
+    --sidebar-background: 235 25% 12%;
+    --sidebar-foreground: 225 10% 75%;
+    --sidebar-primary: 235 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 18%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 220 70% 55%;
+    --sidebar-accent: 235 20% 18%;
+    --sidebar-accent-foreground: 225 15% 95%;
+    --sidebar-border: 235 15% 20%;
+    --sidebar-ring: 235 80% 60%;
 
-    /* Custom tokens */
-    --surface-elevated: 0 0% 100%;
-    --chart-1: 220 70% 45%;
-    --chart-2: 142 70% 45%;
-    --chart-3: 45 93% 47%;
-    --chart-4: 0 84% 55%;
-    --chart-5: 0 0% 20%;
+    /* Glassmorphism */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.2;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
 
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    /* Charts */
+    --chart-1: 235 80% 60%;
+    --chart-2: 152 60% 48%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 76% 57%;
+    --chart-5: 225 10% 35%;
+
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   .dark {
-    --background: 220 25% 7%;
-    --foreground: 220 10% 90%;
-
-    --card: 220 25% 10%;
-    --card-foreground: 220 10% 90%;
-
-    --popover: 220 25% 10%;
-    --popover-foreground: 220 10% 90%;
-
-    --primary: 220 70% 55%;
+    --background: 225 25% 6%;
+    --foreground: 225 10% 92%;
+    --card: 225 20% 10%;
+    --card-foreground: 225 10% 92%;
+    --popover: 225 20% 10%;
+    --popover-foreground: 225 10% 92%;
+    --primary: 235 80% 65%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 20% 15%;
-    --secondary-foreground: 220 10% 85%;
-
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 10% 55%;
-
-    --accent: 220 20% 18%;
-    --accent-foreground: 220 10% 90%;
-
+    --secondary: 225 20% 14%;
+    --secondary-foreground: 225 10% 85%;
+    --muted: 225 15% 14%;
+    --muted-foreground: 225 10% 55%;
+    --accent: 235 25% 16%;
+    --accent-foreground: 235 60% 80%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 220 70% 55%;
-
-    --surface-elevated: 220 25% 12%;
-
-    --sidebar-background: 220 30% 5%;
-    --sidebar-foreground: 220 10% 80%;
-    --sidebar-primary: 220 70% 55%;
+    --border: 225 15% 16%;
+    --input: 225 15% 16%;
+    --ring: 235 80% 65%;
+    --surface-elevated: 225 20% 12%;
+    --sidebar-background: 225 30% 4%;
+    --sidebar-foreground: 225 10% 75%;
+    --sidebar-primary: 235 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 12%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 25% 12%;
-    --sidebar-ring: 220 70% 55%;
+    --sidebar-accent: 225 20% 12%;
+    --sidebar-accent-foreground: 225 10% 92%;
+    --sidebar-border: 225 20% 12%;
+    --sidebar-ring: 235 80% 65%;
+    --glass-bg: 225 20% 10% / 0.7;
+    --glass-border: 225 20% 20% / 0.3;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    --status-active-bg: 152 60% 12%;
+    --status-hurry-bg: 38 70% 12%;
+    --status-urgent-bg: 0 60% 12%;
+    --status-expired-bg: 225 10% 15%;
   }
 }
 
@@ -116,7 +122,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -126,18 +133,34 @@
 
 @layer components {
   .status-badge-active {
-    @apply bg-status-active text-status-active-foreground;
+    @apply bg-status-active-bg text-status-active-foreground border border-status-active/20;
   }
   .status-badge-hurry {
-    @apply bg-status-hurry text-status-hurry-foreground;
+    @apply bg-status-hurry-bg text-status-hurry-foreground border border-status-hurry/20;
   }
   .status-badge-urgent {
-    @apply bg-status-urgent text-status-urgent-foreground;
+    @apply bg-status-urgent-bg text-status-urgent-foreground border border-status-urgent/20;
   }
   .status-badge-expired {
-    @apply bg-status-expired text-status-expired-foreground;
+    @apply bg-status-expired-bg text-status-expired-foreground border border-status-expired/20;
   }
+
+  .glass-card {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--glass-shadow);
+  }
+
   .font-mono-display {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .gradient-mesh {
+    background: 
+      radial-gradient(ellipse at 20% 50%, hsl(235 80% 60% / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, hsl(152 60% 48% / 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, hsl(38 92% 50% / 0.05) 0%, transparent 50%);
   }
 }

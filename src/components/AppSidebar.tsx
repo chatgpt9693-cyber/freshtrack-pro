@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Layers, Bell, Settings, ScanBarcode } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Bell, Settings, ScanBarcode, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Дашборд" },
@@ -14,35 +15,55 @@ export function AppSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border min-h-screen">
-      <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-primary-foreground flex items-center gap-2">
-          <span className="font-mono text-sidebar-primary">FT</span>
-          <span className="text-sidebar-foreground">FreshTrack</span>
-        </h1>
-        <p className="text-xs text-sidebar-foreground/50 mt-1">Контроль сроков годности</p>
+    <aside className="hidden md:flex flex-col w-[260px] bg-sidebar min-h-screen border-r border-sidebar-border">
+      {/* Logo */}
+      <div className="p-5 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-sidebar-primary flex items-center justify-center">
+            <span className="text-sidebar-primary-foreground font-mono font-bold text-sm">FT</span>
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-sidebar-accent-foreground tracking-tight">FreshTrack</h1>
+            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest">Shelf life control</p>
+          </div>
+        </div>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 space-y-0.5">
+        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/30 px-3 pb-2 pt-1">Навигация</p>
         {navItems.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to;
           return (
             <NavLink
               key={to}
               to={to}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              }`}
+              className="relative block"
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                isActive
+                  ? "bg-sidebar-primary/15 text-sidebar-primary"
+                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              }`}>
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute left-0 w-[3px] h-5 rounded-r-full bg-sidebar-primary top-1/2 -translate-y-1/2"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <Icon className="w-[18px] h-[18px]" />
+                {label}
+              </div>
             </NavLink>
           );
         })}
       </nav>
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="text-xs text-sidebar-foreground/40 font-mono">v0.1.0 MVP</div>
+
+      {/* Footer */}
+      <div className="p-4 mx-3 mb-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border/50">
+        <p className="text-[10px] text-sidebar-foreground/30 uppercase tracking-wider">Версия</p>
+        <p className="text-xs text-sidebar-foreground/60 font-mono mt-0.5">0.1.0 — MVP</p>
       </div>
     </aside>
   );
